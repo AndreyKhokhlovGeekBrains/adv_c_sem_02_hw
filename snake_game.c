@@ -28,6 +28,22 @@ typedef struct food_t
     int y;
 } food_t;
 
+typedef struct food_container_t {
+    size_t fsize;
+    food_t *food_arr;
+} food_container_t;
+
+food_container_t initFood(size_t fsize){
+    food_container_t food_container;
+    food_container.fsize = fsize;
+    food_container.food_arr = (food_t*)malloc(sizeof(food_t) * 5); // Max food items cannot be greater than 5
+    for(size_t i = 0; i < fsize; i++) {
+        food_container.food_arr[i].x = rand() % MAX_X;
+        food_container.food_arr[i].y = rand() % MAX_Y;
+    }
+    return food_container;
+}
+
 typedef struct snake_t {
     int x;
     int y;
@@ -35,37 +51,29 @@ typedef struct snake_t {
     int speed;
     tail_t *tail;
     size_t tsize;
-    size_t fsize;
     direction direction;
-    food_t *food;
 } snake_t;
 
 // @***
-snake_t initSnake(int x, int y, size_t tsize, size_t fsize) {
+snake_t initSnake(int x, int y, size_t tsize) {
     snake_t snake;
     snake.x = x;
     snake.y = y;
     snake.level = 0;
     snake.speed = 300;
     snake.tsize = tsize;
-    snake.fsize = fsize;
+    
     snake.tail = (tail_t*)malloc(sizeof(tail_t) * 100); // Grows up to 100 elements
     for(size_t i = 0; i < tsize; i++) {
         snake.tail[i].x = x + i + 1;
         snake.tail[i].y = y;
     }
     snake.direction = LEFT;
-    
-    snake.food = (food_t*)malloc(sizeof(food_t) * 5); // Max food items cannot be greater than 5
-    for(size_t i = 0; i < fsize; i++) {
-        snake.food[i].x = rand() % MAX_X;
-        snake.food[i].y = rand() % MAX_Y;
-    }
 
     return snake;
 }
 
-void printSnake(snake_t snake) {
+void printSnake(snake_t snake, food_container_t food_container) {
     char matrix[MAX_Y][MAX_X];
 
     // Initialize the matrix
@@ -91,8 +99,8 @@ void printSnake(snake_t snake) {
     }
 
     // Place the snake's food
-    for(size_t i = 0; i < snake.fsize; i++) {
-        matrix[snake.food[i].y][snake.food[i].x] = 'x';
+    for(size_t i = 0; i < food_container.fsize; i++) {
+        matrix[food_container.food_arr[i].y][food_container.food_arr[i].x] = 'x';
     }
 
     // Print the matrix
@@ -114,20 +122,20 @@ snake_t general_move(snake_t snake) {
     return snake;
 }
 
-void eat_food(snake_t *snake) {
-    for(size_t i = 0; i < snake->fsize; i++) {
-        if(snake->x == snake->food[i].x && snake->y == snake->food[i].y) {
+void eat_food(snake_t *snake, food_container_t *food_container) {
+    for(size_t i = 0; i < food_container->fsize; i++) {
+        if(snake->x == food_container->food_arr[i].x && snake->y == food_container->food_arr[i].y) {
             snake->tsize++;
             snake->level++;
             snake->speed -= (int)(30 / log(snake->level + 1));
-            snake->food[i].x = (rand() % (MAX_X - 2)) + 1;
-            snake->food[i].y = (rand() % (MAX_Y - 2)) + 1;
+            food_container->food_arr[i].x = (rand() % (MAX_X - 2)) + 1;
+            food_container->food_arr[i].y = (rand() % (MAX_Y - 2)) + 1;
 
-            if(snake->fsize < 5) {
-                snake->fsize++;
+            if(food_container->fsize < 5) {
+                food_container->fsize++;
                 // New food position
-                snake->food[snake->fsize - 1].x = (rand() % (MAX_X - 2)) + 1;
-                snake->food[snake->fsize - 1].y = (rand() % (MAX_Y - 2)) + 1;
+                food_container->food_arr[food_container->fsize - 1].x = (rand() % (MAX_X - 2)) + 1;
+                food_container->food_arr[food_container->fsize - 1].y = (rand() % (MAX_Y - 2)) + 1;
             }
         }
     }
@@ -223,8 +231,9 @@ snake_t get_direction(snake_t snake) {
 }
 
 int main(void) {
-    snake_t snake = initSnake(10, 5, 3, 1);
-    printSnake(snake);
+    snake_t snake = initSnake(10, 5, 3);
+    food_container_t food_container = initFood(1);
+    printSnake(snake, food_container);
 
     int flag = 1;
     while(flag) {
@@ -254,13 +263,13 @@ int main(void) {
         }
 
         check_head_position(&snake);
-        eat_food(&snake);
+        eat_food(&snake, &food_container);
         Sleep(snake.speed);
         clearScreen();
-        printSnake(snake);
+        printSnake(snake, food_container);
     }
 
-    free(snake.food);
+    free(food_container.food_arr);
     free(snake.tail);
     return 0;
 }
