@@ -7,23 +7,22 @@
 #define MAX_X 30
 #define MAX_Y 15
 
-// ANSI escape codes for text colors
-#define RESET_COLOR "\x1B[0m"
-#define RED "\x1B[31m"
-#define GREEN "\x1B[32m"
-#define BLUE "\x1B[34m"
-#define YELLOW "\x1B[33m"
+#define RESET_COLOR 7  // Default console color
+#define GREEN (FOREGROUND_GREEN | FOREGROUND_INTENSITY)
+#define RED (FOREGROUND_RED | FOREGROUND_INTENSITY)
+#define BLUE (FOREGROUND_BLUE | FOREGROUND_INTENSITY)
+#define YELLOW (FOREGROUND_RED | FOREGROUND_GREEN | FOREGROUND_INTENSITY)
 
 typedef enum { UP, DOWN, LEFT, RIGHT } direction;
 typedef enum { SINGLE_PLAYER, TWO_PLAYERS } game_mode;
 
 typedef struct {
     game_mode gameMode;
-    char* snake1Color;
-    char* snake2Color;
+    int snake1Color;
+    int snake2Color;
 } settings;
 
-char* getColorCode(int choice) {
+int getColorCode(int choice) {
     switch (choice) {
         case 1: return RED;
         case 2: return GREEN;
@@ -31,10 +30,6 @@ char* getColorCode(int choice) {
         case 4: return YELLOW;
         default: return RESET_COLOR;
     }
-}
-
-void resetColor() {
-    printf("\033[0m");
 }
 
 void startMenu(settings *settings) {
@@ -146,6 +141,7 @@ snake_t initSnake(int x, int y, size_t tsize) {
 }
 
 void printSnake(snake_t *snake, snake_t *snake2, food_container_t food_container, settings settings) {
+    HANDLE hStdOut = GetStdHandle(STD_OUTPUT_HANDLE);
     char matrix[MAX_Y][MAX_X];
 
     // Initialize the matrix
@@ -182,11 +178,14 @@ void printSnake(snake_t *snake, snake_t *snake2, food_container_t food_container
     for(int i = 0; i < MAX_Y; i++) {
         for(int j = 0; j < MAX_X; j++) {
             if (matrix[i][j] == '@' || matrix[i][j] == '*') {
-                printf("%s%c", settings.snake1Color, matrix[i][j]);
+                SetConsoleTextAttribute(hStdOut, settings.snake1Color);
+                printf("%c", matrix[i][j]);
             } else if (matrix[i][j] == '#' || matrix[i][j] == 'o') {
-                printf("%s%c", settings.snake2Color, matrix[i][j]);
+                SetConsoleTextAttribute(hStdOut, settings.snake2Color);
+                printf("%c", matrix[i][j]);
             } else {
-                printf("%s%c", RESET_COLOR, matrix[i][j]);
+                SetConsoleTextAttribute(hStdOut, RESET_COLOR);
+                printf("%c", matrix[i][j]);
             }
         }
         printf("\n");
@@ -372,6 +371,7 @@ void generateSnakeDirection(snake_t *snake2, food_container_t food_container) {
 }
 
 int main(void) {
+
     settings settings;
     startMenu(&settings);
 
@@ -414,7 +414,6 @@ int main(void) {
         printSnake(snake, snake2, food_container, settings);
     }
 
-    resetColor();
     free(food_container.food_arr);
     free(snake->tail);
     if (snake2 != NULL) {
